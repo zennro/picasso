@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <title><%= settings.dashboard_title %></title>
+    <style>
+      @import url(style.css);
+    </style>
+  </head>
+
+  <body>
+    <div id="content">
+      <h1><%= settings.dashboard_title %></h1>
+    </div>
+
+    <div id="graphs"></div>
+
+    <div id="footer">
+      <p>Powered by <a href="http://www.sinatrarb.com">sinatra</a>, <a href="http://sqlite.org">sqlite</a> and <a href="http://square.github.io/cubism/">cubism.js</a>.</p>
+    </div>
+
+    <script type="text/javascript" src="//cdnjs.cloudflare.com/ajax/libs/jquery/2.0.3/jquery.min.js"></script>
+    <script type="text/javascript" src="//cdnjs.cloudflare.com/ajax/libs/d3/3.4.1/d3.min.js"></script>
+    <script type="text/javascript" src="//cdnjs.cloudflare.com/ajax/libs/cubism/1.2.2/cubism.v1.min.js"></script>
+
+    <script>
+      var config = <%= settings.data.to_json %>;
+      var context = cubism.context().step(config.step).size(config.samples_per_page);
+
+      function dataSource(tag, variable) {
+        var title = [tag, variable].join(" - ");
+
+        return context.metric(function(start, stop, step, callback) {
+          var url = ['/data', tag, variable, Math.floor(start.getTime()), Math.floor(stop.getTime()), Math.floor(step)].join("/");
+
+          d3.json(url, function(data) {
+            if(data) {
+              callback(null, $.map(data, function(d) { return d[1]; }));
+            } else {
+              return callback(new Error("unable to load data"));
+            }
+          });
+        }, title);
+
+      }
+
+      d3.select("#graphs").call(function(div) {
+
+        div.selectAll(".axis")
+           .data(["top"])
+           .enter()
+           .append("div")
+           .attr("class", function(d) { return d + "axis"; })
+           .each(function(d) { d3.select(this).call(context.axis().orient(d)); });
+
+        div.selectAll(".horizon")
+        .data( config.sources.map(function(ds) { return dataSource(ds[0], ds[1]); }) )
+           .enter()
+           .insert("div", ".bottom")
+           .attr("class", "horizon")
+           .call(context.horizon());
+
+        div.append("div")
+           .attr("class", "rule")
+           .call(context.rule());
+      });
+    </script>
+  </body>
+</html>
