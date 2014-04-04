@@ -58,7 +58,7 @@
            .enter()
            .insert("div", ".bottom")
            .attr("class", "horizon")
-           .call(context.horizon());
+           .call(context.horizon().format(d3.format(".2f")));
 
         div.append("div")
            .attr("class", "rule")
